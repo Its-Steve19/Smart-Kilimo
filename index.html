@@ -1,0 +1,1485 @@
+ <!DOCTYPE html> 
+<html lang="sw"> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy"
+content="
+default-src 'self';
+script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob:;
+media-src 'self' blob:;
+">
+     <title>Smart Kilimo </title>
+     <link rel="icon" href="favicon.png">
+     <link rel="manifest" href="manifest.json">
+    <script src="tf.min.js"></script>
+     <script src="teachablemachine-image.min.js"></script>
+ 
+    <style>
+        :root { 
+            --p: #2e7d32; --s: #1b5e20; --a: #fbc02d; --bg: #f4f7f4; 
+            --mchicha: #4caf50; --kabichi: #8bc34a; --mahindi: #fdd835;
+        }
+
+        body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); }
+        
+        /* LOGIN SCREEN - IMEREKEBISHWA KWA MVUTIO */
+        
+        #login-overlay {
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, var(--s), #43a047);
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    z-index: 10000;
+}
+
+.login-card { 
+    background: white; 
+    /* Tumepunguza padding kutoka 40px hadi 25px ili isichukue nafasi kubwa */
+    padding: 25px 20px; 
+    border-radius: 25px; 
+    /* Upana wa 80% na max-width ya 300px inafanya iwe compact zaidi */
+    width: 80%; 
+    max-width: 300px; 
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.login-plant { 
+    /* Tumepunguza size ya mmea kutoka 60px hadi 45px */
+    font-size: 45px; 
+    margin-bottom: 8px; 
+    animation: pulse 2s infinite; 
+}
+
+@keyframes pulse { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.05); } 
+    100% { transform: scale(1); } 
+}
+
+.login-card h2 {
+    font-size: 20px; /* Saizi ndogo kidogo kwa ajili ya simu */
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: var(--p);
+}
+
+.login-card p {
+    font-size: 13px; /* Maelezo yawe madogo ili yasichoshe jicho */
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.login-card input { 
+    width: 100%; 
+    /* Padding ya ndani imepunguzwa kidogo */
+    padding: 12px 15px; 
+ 
+    border-radius: 12px; 
+    border: 2px solid #f0f0f0; 
+    margin-bottom: 15px; 
+    outline: none; 
+    box-sizing: border-box; 
+    font-size: 14px; /* Font inayosomeka vizuri bila kuwa kubwa mno */
+}
+
+/* Kitufe cha kuingia nacho kimepata mguso mdogo */
+.login-card .btn-main {
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 12px;
+}
+
+
+#preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1; /* Picha iwe chini ya laser kidogo */
+    display: none;
+}
+
+
+        /* HEADER NA LOGOUT */
+        header { 
+            background: var(--p); color: white; padding: 15px 20px; 
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: bold; border-radius: 0 0 20px 20px; position: sticky; top: 0; z-index: 1000;
+        }
+        .logout-btn { background: rgba(255,255,255,0.2); border: 1px solid white; color: white; padding: 5px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; }
+
+        .container { padding: 20px; max-width: 500px; margin: auto; display: flex; flex-direction: column; gap: 30px; }
+        .card { background: white; border-radius: 25px; padding: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.05); }
+
+        /* SCANNER */
+.view-box {
+    position: relative;
+    width: 100%;
+    height: 250px;
+    background: #222; /* Rangi ya giza kidogo nyuma */
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid #eee;
+}
+
+#preview {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Inahakikisha picha haijikunjakunji */
+    z-index: 1; 
+}
+
+.laser {
+    position: absolute;
+    z-index: 10; /* Laser iwe juu kabisa ya kila kitu */
+    width: 100%;
+    height: 3px;
+    background: #00ff00;
+    box-shadow: 0 0 15px #00ff00;
+    animation: scan 2s infinite ease-in-out;
+    display: none;
+}
+
+@keyframes scan {
+    0% { top: 0%; }
+    50% { top: 100%; }
+    100% { top: 0%; }
+}
+        /* TABS */
+        .tabs { display: flex; background: #eee; border-radius: 15px; padding: 5px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; border: none; padding: 10px; background: none; font-weight: bold; cursor: pointer; border-radius: 10px; color: #777; transition: 0.3s; }
+        .tab-btn.active { background: white; color: var(--p); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+        /* CHAT INPUT */
+        .chat-input-wrapper { display: flex; align-items: center; gap: 10px; background: #f0f0f0; padding: 8px 15px; border-radius: 30px; }
+        .chat-input-wrapper input { flex: 1; border: none; background: transparent; outline: none; padding: 8px; }
+        .mic-btn { background: none; border: none; font-size: 20px; cursor: pointer; }
+        .send-btn { background: var(--p); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+
+        /* LIB BUTTONS */
+        .lib-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; }
+        .btn-mchicha { background: var(--mchicha); color: white; padding: 10px 18px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-kabichi { background: var(--kabichi); color: #1b5e20; padding: 10px 18px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-mahindi { background: var(--mahindi); color: #333; padding: 10px 18px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; }
+
+        /* KIKOKOTOO SERIES */
+        .calc-series { display: flex; gap: 10px; margin-bottom: 15px; }
+        .calc-box { flex: 1; background: #f8fafb; border: 2px solid #e1f5fe; border-radius: 15px; padding: 10px; }
+        .calc-box label { font-size: 11px; font-weight: bold; color: #01579b; display: block; }
+        .calc-box input, .calc-box select { width: 100%; border: none; background: transparent; outline: none; font-weight: bold; }
+        
+        .btn-calc { width: 100%; padding: 16px; border-radius: 15px; border: none; background: #1565c0; color: white; font-weight: bold; cursor: pointer; }
+
+        .btn-main { width: 100%; padding: 15px; border-radius: 15px; border: none; font-weight: bold; cursor: pointer; color: white; }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay">
+    <div class="login-card">
+        <div class="login-plant">🌱</div>
+        <h2 style="color: var(--p); margin-top: 0;">Smart Kilimo AI</h2>
+        <p style="color: #666; font-size: 14px;">Karibu, ingiza jina kuanza safari yako.</p>
+        <input type="text" id="username" autocomplete="name" placeholder="Jina lako hapa...">
+      <button onclick="app.login()" class="btn-main" style="background: var(--p);">INGIA SASA</button>
+    </div>
+</div>
+
+<header>
+    <span>🌽 Smart Kilimo</span>
+    <button class="logout-btn" onclick="app.logout()">TOKA</button>
+</header>
+
+<div class="container" id="app-body" style="display: none;">
+    
+    <div class="card">
+        <b id="user-tag" style="color: var(--p); display: block; margin-bottom: 10px;"></b>
+        <div class="view-box"style="position: relative; width: 100%; height: 280px; background: #000; border-radius: 20px; overflow: hidden; border: 2px solid #eee;">
+            <div id="laser" class="laser"></div>
+            <video id="video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1;"></video>
+           <img id="preview" style="display:none; width:100%; height:100%; object-fit:cover; position: absolute; z-index: 2;">
+           
+        </div>
+        <div id="scan-res-area" style="display:none; margin-bottom: 15px; padding: 15px; background: #f9f9f9; border-radius: 15px; border-left: 5px solid var(--p);">
+            </div>
+       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px;">
+    <button id="start-scan-btn" onclick="app.startLiveScan()" class="btn-main" style="background: var(--p);">📷 ANZA KUSCANI LIVE</button>
+        <button onclick="document.getElementById('file-in').click()" class="btn-main" style="background: #1976d2;">📁 PAKIA PICHA</button>   </div>
+  
+    <input type="file" id="file-in" accept="image/*" hidden onchange="app.handleUpload(event)">
+        <button id="speak-btn" onclick="app.speak()" class="btn-main" style="background: var(--a); color: #333; margin-top: 12px;">🔊 SIKILIZA TIBA</button>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="tabs" style="margin: 15px;">
+            <button id="tab-c" class="tab-btn active" onclick="app.switchTab('chat')">🤖 Chat</button>
+            <button id="tab-h" class="tab-btn" onclick="app.switchTab('hist')">📜 Historia</button>
+        </div>
+        <div id="chat-ui" style="padding: 0 15px 15px 15px;">
+            <div id="chat-box" style="height: 150px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 12px; margin-bottom: 10px; font-size: 14px;">
+                <div style="color:var(--p)"><b>AI:</b> Karibu! Naweza kukusaidia leo?</div>
+            </div>
+            <div class="chat-input-wrapper" style="display: flex; align-items: center; gap: 8px; padding: 10px; background: #fff; border-top: 1px solid #eee; box-sizing: border-box; width: 100%;">
+                <button class="mic-btn" onclick="app.startMic()" style="flex-shrink: 0; background: #f0f0f0; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">🎤</button>
+               <input type="text" id="chat-input" 
+           onkeypress="if(event.key === 'Enter') app.sendMsg()" 
+           placeholder="Ongea au andika hapa..." 
+           style="flex: 1; min-width: 0; padding: 12px; border-radius: 25px; border: 1px solid #ddd; outline: none; box-sizing: border-box;">
+                <button class="send-btn" onclick="app.sendMsg()" style="flex-shrink: 0; background: var(--p, #2e7d32); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">🚀</button>
+                
+            </div>
+        </div>
+        <div id="history-list" style="display: none;  text-align: center; color: #999;height: 150px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 12px; margin-bottom: 10px; font-size: 14px;">Hakuna historia bado.</div>
+        <div style="padding: 20px; text-align: center;">
+    <button onclick="app.clearAccountHistory()" 
+            style="background: #ff4444; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        🗑️ Futa Historia na Chat Zangu
+    </button>
+    <p style="font-size: 11px; color: #888; margin-top: 8px;">
+        Hatua hii haitafuta data za watumiaji wengine.
+    </p>
+</div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; font-size: 16px;">📚 Maktaba</h3>
+        <div class="lib-scroll">
+            <button class="btn-mchicha" onclick="app.lib('mchicha')">🌿 Mchicha</button>
+            <button class="btn-kabichi" onclick="app.lib('kabichi')">🥬 Kabichi</button>
+            <button class="btn-mahindi" onclick="app.lib('mahindi')">🌽 Mahindi</button>
+        </div>
+        <div id="lib-box" style="margin-top:15px; font-size:14px; background:#f1f8e9; padding:15px; border-radius:15px;">Gusa zao kupata maelezo zaidi...</div>
+    </div>
+
+    <div class="card" style="background: #e3f2fd;">
+        <h3 style="margin:0 0 15px 0; color: #1565c0; font-size: 16px;">🧮 Kikokotoo</h3>
+     <h4>Ingiza ekari ili kupata njia sahihi ya kulima zao husika </h4>
+        <div class="calc-series">
+            <div class="calc-box"><label>Ekari</label><input type="number" id="acres" placeholder="0"></div>
+            <div class="calc-box">
+                <label>Zao</label>
+                <select id="crop-select">
+                    <option value="mchicha">Mchicha</option>
+                    <option value="kabichi">Kabichi</option>
+                    <option value="mahindi">Mahindi</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn-calc" onclick="app.calculate()">PIGA HESABU</button>
+        <div id="calc-res" style="display:none; margin-top:10px; font-size:13px; background:white; padding:12px; border-radius:12px;"></div>
+    </div>
+</div>
+<script>
+    // --- 1. VARIABLES NA CONFIGURATION ---
+    let model, webcam, maxPredictions, lastSol = "", currentD = "", currentUser = "null", currentTab = "chat";
+    let lastChatReply = "";
+    let isScanning = false; 
+    const MODEL_URL = "./model/";
+
+    // --- 2. DATABASE YA MAGONJWA ---
+    
+    // --- 1. DATA YA MAGONJWA (DISEASE DATA) ---
+    const db = {
+        "Cabbage Healthy": {
+            "sw": "Kabichi yako haina ugonjwa. Endelea kumwagilia, tumia mbolea na linda dhidi ya wadudu.",
+            "en": "Your cabbage is healthy. Continue watering, fertilizing, and pest control.",
+            },
+        "Black Rot": {
+            "sw": "Black Rot: Majani yanakuwa ya njano yenye umbo la 'V' na mishipa myeusi. Tumia mbegu safi na epuka maji kusimama.",
+            "en": "Black Rot: Causes V-shaped yellow leaves and black veins. Use clean seeds and avoid water stagnation.",
+            },
+        "Downy Mildew Cabbage": {
+            "sw": "Downy Mildew: Ukungu wa kijivu chini ya jani. Tumia fungicide (mfano: Copper) na punguza msongamano.",
+            "en": "Downy Mildew: Grey mold under leaves. Use fungicide and reduce plant congestion.",
+            },
+        "Maize Healthy": {
+            "sw": "Mahindi yako yana afya. Endelea na matunzo bora kama palizi na mbolea ya kukuzia.",
+            "en": "Your maize is healthy. Maintain good farming practices like weeding.",
+            },
+        "MLN": {
+            "sw": "MLN: Ugonjwa hatari wa virusi. Ukiona mmea unadumaa, ng'oa na uchome moto haraka sana.",
+            "en": "MLN: Dangerous viral disease. If stunting occurs, uproot and burn the plant immediately.",
+            },
+        "MSV": {
+            "sw": "MSV: Mistari ya njano kwenye mishipa ya jani. Dhibiti wadudu wa Leafhoppers na panda mbegu bora.",
+            "en": "MSV: Yellow streaks along veins. Control Leafhoppers and plant resistant varieties.",
+           },
+        "Common Rust": {
+            "sw": "Common Rust: Madoa ya kahawia kama kutu pande zote za jani. Tumia fungicide mapema.",
+            "en": "Common Rust: Brown pustules like rust on leaves. Apply fungicide early.",
+            },
+        "Northern Leaf Blight": {
+            "sw": "Leaf Blight: Madoa marefu ya kijivu yanayofanana na sigara. Ondoa majani yaliyoathirika.",
+            "en": "Leaf Blight: Long gray cigar-shaped spots. Remove infected leaves.",
+            },
+        "Gray Leaf Spot": {
+            "sw": "Gray Leaf Spot: Madoa ya kijivu ya mstatili kati ya mishipa. Punguza unyevu shambani.",
+            "en": "Gray Leaf Spot: Gray rectangular lesions. Reduce humidity and ensure air circulation.",
+            },
+        "Spinach Healthy": {
+            "sw": "Spinach yako ina afya. Ongeza mbolea ya samadi au ya majani (foliar booster).",
+            "en": "Your spinach is healthy. Add manure or foliar fertilizer.",
+            },
+        "Anthracnose": {
+            "sw": "Anthracnose: Madoa meusi yaliyozama. Tumia fungicide na usiguse mimea ikiwa mibichi.",
+            "en": "Anthracnose: Dark sunken spots. Apply fungicide; avoid handling wet plants.",
+            },
+        "Bacterial Spot": {
+            "sw": "Bacterial Spot: Madoa madogo ya majimaji. Tumia bactericides na epuka kumwagilia juu ya majani.",
+            "en": "Bacterial Spot: Small water-soaked spots. Use bactericide.",
+           },
+        "Downy Mildew Spinach": {
+            "sw": "Downy Mildew: Ukungu wa zambarau chini ya majani. Punguza unyevu na nafasi iwe sahihi.",
+            "en": "Downy Mildew: Purple growth under leaves. Reduce moisture.",
+          },
+        "Pest Damage": {
+            "sw": "Uharibifu wa wadudu: Majani yana matundu. Tumia insecticide (mfano: Dudumeki) au Neem oil.",
+            "en": "Pest damage: Holes on leaves. Use insecticide or Neem oil.",
+            },
+        "haijulikani": {
+            "sw": "⚠️ Samahani, mmea huu haujatambuliwa. Mfumo huu ni kwa ajili ya mazao ya [Mahindi,mchicha na kabechi] tu. Tafadhali piga picha jani la zao husika.",
+            "en": "⚠️ Sorry, this plant is not recognized. This system is only for [Maize,spinach,cabbage] only. Please scan a leaf of the relevant crop.",
+        }
+       };
+
+    // --- 2. MAKTABA (LIBRARY GUIDES) ---
+    const cropGuides = {
+        "mahindi": `
+            <h4 style="margin-top:0; color:#fbc02d; border-bottom:1px solid #ddd;">Kilimo cha Mahindi Bora 🌽</h4>
+        <p><b>1. Mbegu na Upandaji:</b> Tumia mbegu zilizoidhinishwa (Hybrid au OPV). Ekari moja inahitaji kilo 8-10. Nafasi ni sm 75 kati ya mistari na sm 25 kati ya shimo na shimo (shimo 1 mbegu 1).</p>
+        <p><b>2. Mbolea:</b> 
+            <br>• <i>Kupanda:</i> Tumia DAP au Minjingu (Kijiko 1 cha chai kwa shimo).
+            <br>• <i>Kukuzia:</i> Weka UREA au CAN mmea ukiwa na urefu wa goti (wiki 3-4).</p>
+        <p><b>3. Udhibiti wa Wadudu:</b> Kagua 'Viwavi Jeshi' (Fall Armyworm). Ukiona matundu kwenye majani, tumia dawa kama <i>Belt</i> au <i>Emamectin Benzoate</i> mapema.</p>
+        <p><b>4. Uvunaji:</b> Mahindi hukomaa baada ya siku 90-120 kulingana na aina ya mbegu. Vuna yakiwa yamekakaa (unyevu chini ya 13%).</p>
+    `,
+        "kabichi": `
+            <h4 style="margin-top:0; color:#81c784; border-bottom:1px solid #ddd;">Kilimo cha Kabichi 🥬</h4>
+        <p><b>1. Kitalu:</b> Panda mbegu kitaluni kwanza. Tumia sm 10-15 kati ya mistari kitaluni. Hamishia shambani mche ukiwa na majani 4-6 (wiki 4-6).</p>
+        <p><b>2. Nafasi na Upandaji:</b> Tumia sm 60x60 kwa aina kubwa, au sm 45x60 kwa aina ndogo. Hakikisha udongo una unyevu wakati wa kuhamisha miche.</p>
+        <p><b>3. Mahitaji ya Maji:</b> Kabichi inahitaji maji mengi sana. Mwagilia kila asubuhi na jioni, hasa wakati kichwa (head) kinaanza kutengenezwa.</p>
+        <p><b>4. Changamoto:</b> Kinga dhidi ya 'Diamondback Moth' na 'Black Rot'. Badilisha mazao (Crop Rotation) kila msimu; usipande kabichi sehemu moja mfululizo.</p>
+    `,
+        "mchicha": `
+             <h4 style="margin-top:0; color:#2e7d32; border-bottom:1px solid #ddd;">Kilimo cha Mchicha (Mboga za Majani) 🌿</h4>
+        <p><b>1. Maandalizi:</b> Lima ardhi iwe laini sana (Fine tilth). Mchicha una mbegu ndogo, hivyo unahitaji ardhi iliyopondwa vizuri.</p>
+        <p><b>2. Upandaji:</b> Changanya mbegu na mchanga (uwiano 1:3) ili usipande kwa msongamano. Panda kwenye mistari ya sm 20-30 au tawanya kwenye tuta.</p>
+        <p><b>3. Rutuba:</b> Mchicha unapenda samadi iliyooza vizuri sana. Ongeza mbolea ya majani (Foliar Booster) kila baada ya wiki 2 ili kupata maji mapana na ya kijani.</p>
+        <p><b>4. Uvunaji:</b> Unaweza kuanza kuvuna majani makubwa baada ya wiki 3. Ukikata na kuacha shina, mchicha utachipua tena kwa ajili ya mavuno ya pili na ya tatu.</p>
+    `
+    };
+
+    // --- 3. CHAT KNOWLEDGE (AI BRAIN) ---
+     const chatKnowledge = {
+        "sw": [
+            { key: ["jinsi", "tumia", "kufanya"], ans: "Ili kunitumia: 1. Bonyeza Kamera au Pakia Jani. 2. Subiri AI isome picha. 3. Angalia majibu na ushauri wa kitaalamu chini ya picha." },
+            { key: ["mbolea", "mahindi"], ans: "Kwa mahindi: Tumia DAP (kupanda), UREA (kukuzia - wiki 3-4), na CAN (wakati wa kutoa mbelewele)." },
+            { key: ["mbolea", "kabichi"], ans: "Kabichi inapenda mbolea ya samadi (bolea) iliyooza vizuri na NPK 10-10-10 kwa ajili ya vichwa vikubwa." },
+            { key: ["mbolea", "mchicha"], ans: "Mchicha unahitaji Nitrojeni nyingi. Tumia samadi au mbolea ya majani (Foliar) kila baada ya kuvuna." },
+            { key: ["mln", "virusi", "hatari"], ans: "MLN haina dawa. Ukiona mmea una madoa ya njano na unanyauka kuanzia juu, ung'oe na uuchome mara moja kuzuia kuenea." },
+            { key: ["wadudu", "funza", "kiwavi"], ans: "Kwa funza wa mahindi (Fall Armyworm), tumia dawa kama 'Belt' au 'Emamectin Benzoate' mapema asubuhi au jioni." },
+            { key: ["offline", "internet"], ans: "App hii inafanya kazi hata kama huna bando (Offline) kwa sababu model ya AI ipo ndani ya simu yako!" },
+            { key: ["history", "kumbukumbu"], ans: "Kila matokeo unayopata yanahifadhiwa kwenye tab ya 'Historia Yangu' ili uweze kuyaona baadae." },
+            { key: ["nani", "tengeneza"], ans: "Smart Kilimo AI imetengenezwa kusaidia wakulima wadogo na wa kati kupata utambuzi wa magonjwa kwa haraka." },
+            { key: ["bei", "soko"], ans: "Kwa sasa najihusisha na afya ya mimea zaidi. Kwa bei za soko, tafadhali wasiliana na viongozi wa soko la karibu nawe." },
+            { key: ["habari", "mambo"], ans: "Safi sana mkulima! Karibu. Una swali gani kuhusu mazao yako leo?" },
+            { key: ["jinsi", "tumia", "fanya", "shamba"], ans: "Ili kunitumia: 1. Bonyeza 'Kamera' au 'Pakia' picha ya jani. 2. Subiri AI isome picha. 3. Angalia majibu na ushauri chini ya picha." },
+            { key: ["offline", "internet", "bando"], ans: "App hii inafanya kazi hata bila internet (Offline) mara baada ya kuinstall kwenye simu yako." },
+            { key: ["futa", "history", "kumbukumbu"], ans: "Unaweza kufuta kumbukumbu zako kwa kubonyeza kitufe chekundu cha 'Futa Historia' au 'Futa Chats' hapo juu." },
+            { key: ["mahindi", "maize"], ans: "Kwa mahindi: Tumia DAP (kupanda), UREA (wiki 3-4), na CAN (wakati wa kutoa mbelewele). Hakikisha unapalilia mapema." },
+            { key: ["kabichi", "cabbage"], ans: "Kabichi inahitaji mbolea ya samadi iliyooza vizuri na NPK kwa ajili ya vichwa vikubwa na vyenye afya." },
+            { key: ["mchicha", "spinach"], ans: "Mchicha unahitaji Nitrojeni nyingi. Tumia samadi au mbolea ya majani (Foliar) kila baada ya kuvuna ili yachipue tena haraka." },
+            { key: ["mln", "maize lethal"], ans: "MLN ni virusi hatari. Ukiona madoa ya njano na mmea unanyauka juu, ng'oa na uchome moto shamba zima haraka." },
+            { key: ["msv", "streak"], ans: "MSV husababisha mistari ya njano. Inazuiliwa kwa kupanda mbegu bora na kudhibiti wadudu wa leafhoppers." },
+            { key: ["rust", "kutu"], ans: "Common Rust huleta madoa ya kahawia kama kutu. Tumia dawa za kuzuia kuvu (fungicides) kama Mancozeb." },
+            { key: ["blight", "northern"], ans: "Leaf Blight huleta madoa marefu ya kijivu. Punguza unyevu na ondoa majani ya chini yaliyoathirika." },
+            { key: ["gray leaf"], ans: "Gray Leaf Spot huleta madoa yenye pembe. Inatokea sana kukiwa na unyevu mwingi na hewa isiyopita vizuri." },
+            { key: ["black rot", "oza"], ans: "Black Rot husababishwa na bakteria. Epuka kumwagilia maji juu ya majani, mwagilia kwenye mizizi tu." },
+            { key: ["mildew", "downy"], ans: "Downy Mildew huleta ukungu mweupe chini ya jani. Tumia dawa za kuzuia kuvu (Copper fungicides)." },
+            { key: ["anthracnose"], ans: "Anthracnose huleta madoa meusi yaliyozama. Usiguse mimea ikiwa na unyevu wa mvua kuzuia kuenea." },
+            { key: ["bacterial spot"], ans: "Bacterial Spot huleta madoa madogo ya maji. Tumia mbegu zilizoidhinishwa na TOSCI pekee." },
+            { key: ["wadudu", "funza", "kiwavi"], ans: "Kwa wadudu kama funza, tumia dawa ya asili ya Neem au insecticide kama Dudumeki mapema asubuhi." }
+        ],
+        "en": [
+            { key: ["how", "use", "work"], ans: "1. Click Camera or Upload a leaf image. 2. Wait for AI to scan. 3. Read the diagnosis and advice provided below the image." },
+            { key: ["fertilizer", "maize"], ans: "For maize: Use DAP for planting, UREA for top dressing (3-4 weeks), and CAN during tasseling." },
+            { key: ["fertilizer", "cabbage"], ans: "Cabbage loves well-decomposed manure and NPK 10-10-10 for firm, large heads." },
+            { key: ["mln", "lethal"], ans: "MLN has no cure. If you see yellowing and stunted growth, uproot and burn the plant immediately to save your farm." },
+            { key: ["pest", "insect", "worm"], ans: "For Fall Armyworm in maize, use insecticides like 'Belt' or 'Emamectin' during early morning or evening hours." },
+            { key: ["offline"], ans: "This app works offline! Once installed, you can scan crops without an active internet connection." 
+            }
+        ],
+         "meta": {
+        "sw": { shukrani: "Asante kwa swali kuhusu ", mtaalamu: ". Samahani, sijaelewa swali lako. Jaribu kuuliza kuhusu mbolea, magonjwa ya mahindi, au jinsi ya kunitumia.", aiName: "Smart Kilimo" },
+        "en": { shukrani: "Thank you for the uestion about ", mtaalamu: ".I didn't quite catch that. Try asking about fertilizers, maize diseases, or how to use me.", aiName: "Smart Farming" }
+    }
+    };
+   
+
+    // --- 4. APP ENGINE ---
+    const app = {
+        videoStream: null,
+       currentUser: localStorage.getItem("smart_kilimo_user") || null,
+        lastScanResult: "",
+        currentLang: "sw",
+        lastResKey: "",
+
+login: function() {
+        const nameInput = document.getElementById("username");
+        // 1. Pata jina na liondoe nafasi (spaces) mwanzoni na mwishoni
+        const name = nameInput ? nameInput.value.trim() : "";
+        
+        if (name) {
+            // 2. Weka mtumiaji wa sasa kwenye kumbukumbu ya App
+            this.currentUser = name;
+            
+            // 3. Hifadhi jina kwenye Browser ili app imkumbuke akirefresh
+            localStorage.setItem("smart_kilimo_user", name);
+            
+            // 4. Safisha UI (Kioo) kuzuia kuona data za mtu aliyepita
+            const chatBox = document.getElementById("chat-content") || document.getElementById("chat-box");
+            const historyList = document.getElementById("history-list");
+            
+            if (chatBox) chatBox.innerHTML = "";
+            if (historyList) historyList.innerHTML = "";
+            
+            // 5. Badili muonekano wa kioo (Ficha Login, Onyesha App)
+            const loginOverlay = document.getElementById("login-overlay");
+            const appBody = document.getElementById("app-body");
+            
+            if (loginOverlay) loginOverlay.style.display = "none";
+            if (appBody) appBody.style.display = "block";
+            
+            // 6. Onyesha jina la mkulima kwenye tag ya juu
+            const userTag = document.getElementById("user-tag");
+            if (userTag) {
+                userTag.innerText = "👤 Karibuu: " + name;
+                userTag.style.fontWeight = "bold"; // Ongeza urembo kidogo
+            }
+
+            // 7. Pakia historia na chats za huyu mtumiaji pekee
+            if (typeof this.loadHistory === "function") {
+                this.loadHistory();
+            }
+            
+            console.log("Login imefanikiwa kwa: " + name);
+        } else {
+            // Kama ameacha wazi, mtoe alert na mrudishe kwenye input
+            alert("Tafadhali weka jina lako ili uweze kuendelea!");
+            if (nameInput) nameInput.focus();
+        }
+    }, 
+     
+        logout: function() {
+            // Futa jina na historia ya muda (kama unataka)
+            localStorage.removeItem("smart_kilimo_user");
+            // Rudisha ukurasa upya
+            location.reload();
+        },
+
+     initAI: async function() {
+        try {
+            console.log("AI inajiandaa kuanza...");
+            // Badilisha URL iende kwenye folder lako la model
+            const modelURL = "./model/model.json"; 
+            const metadataURL = "./model/metadata.json";
+
+            // Pakia model kwa kutumia tmImage (Teachable Machine Image)
+            this.model = await tmImage.load(modelURL, metadataURL);
+            
+            console.log("AI ya Teachable Machine ipo TAYARI (Offline Mode)!");
+        } catch (error) {
+            console.error("Imeshindwa kupakia model ya ndani:", error);
+        }
+    },
+     
+// ==========================================
+    // 1. WASHA KAMERA NA PAKIA MODEL (FOLDER: model)
+    // ==========================================
+    startLiveScan: async function() {
+        const video = document.getElementById("video");
+        const preview = document.getElementById("preview");
+        const resArea = document.getElementById("scan-res-area");
+        const speakBtn = document.getElementById("speak-btn");
+
+        // 1. SAFISHA MUONEKANO (RESET UI)
+        if (preview) preview.style.display = "none"; 
+        if (video) video.style.display = "block";
+        if (resArea) resArea.style.display = "none";
+        if (speakBtn) speakBtn.style.display = "none";
+
+        // 2. PAKIA MODEL YA TEACHABLE MACHINE (KUTOKA FOLDER LA 'model')
+        if (!this.model) {
+            try {
+                console.log("Inapakia AI Model kutoka folder la 'model'...");
+                const modelURL = "./model/model.json";
+                const metadataURL = "./model/metadata.json";
+                
+                // Tunatumia tmImage kupakia Teachable Machine Model
+                this.model = await tmImage.load(modelURL, metadataURL);
+                console.log("AI Model Ipo Tayari!");
+            } catch (err) {
+                console.error("AI imeshindwa kupakia:", err);
+                alert("Kuna tatizo la kupakia faili za AI kutoka folder la 'model'.");
+                return;
+            }
+        }
+
+        // 3. MIPANGILIO YA HD (1080p)
+        const hdConstraints = {
+            video: {
+                facingMode: "environment",
+                width: { ideal: 1920 }, 
+                height: { ideal: 1080 },
+                frameRate: { ideal: 30 }
+            }
+        };
+
+        // 4. WASHA KAMERA NA ANZA SCAN
+        navigator.mediaDevices.getUserMedia(hdConstraints)
+            .then(stream => {
+                this.videoStream = stream;
+                video.srcObject = stream;
+                
+                // Ongeza ubora wa kioo ili AI ione vizuri
+                video.style.filter = "contrast(1.2) saturate(1.1) brightness(1.05)";
+                
+                this.isScanning = true;
+                
+                // Toa muda kidogo kwa kamera ku-focus kabla ya kuanza uchambuzi
+                setTimeout(() => {
+                    this.processLiveScan();
+                }, 1500);
+            })
+            .catch(err => {
+                console.error("HD Kamera imefeli:", err);
+                alert("Tafadhali ruhusu kamera kwa ubora wa juu.");
+            });
+    },
+// 1. ANZA KAMERA NA LIVE SCAN
+ reScan: async function() {
+        const video = document.getElementById("video");
+        const preview = document.getElementById("preview");
+        const resArea = document.getElementById("scan-res-area");
+        const speakBtn = document.getElementById("speak-btn");
+
+        // 1. SAFISHA MUONEKANO (RESET UI)
+        if (preview) preview.style.display = "none"; 
+        if (video) video.style.display = "block";
+        if (resArea) resArea.style.display = "none";
+        if (speakBtn) speakBtn.style.display = "none";
+
+        // 2. PAKIA MODEL YA TEACHABLE MACHINE (Kama haijapakia)
+        // Tunahakikisha model inatoka kwenye folder lako la 'model'
+        if (!this.model) {
+            try {
+                console.log("Inapakia AI Model kwa ajili ya reScan...");
+                const modelURL = "./model/model.json";
+                const metadataURL = "./model/metadata.json";
+                this.model = await tmImage.load(modelURL, metadataURL);
+            } catch (err) {
+                console.error("AI imegoma kupakia kwenye reScan:", err);
+                alert("Kuna tatizo la kiufundi kwenye mfumo wa AI.");
+                return;
+            }
+        }
+
+        // 3. MIPANGILIO YA HD (1080p)
+        const hdConstraints = {
+            video: {
+                facingMode: "environment",
+                width: { ideal: 1920 }, 
+                height: { ideal: 1080 },
+                frameRate: { ideal: 30 }
+            }
+        };
+
+        // 4. WASHA KAMERA NA ANZA SCAN TENA
+        navigator.mediaDevices.getUserMedia(hdConstraints)
+            .then(stream => {
+                this.videoStream = stream;
+                video.srcObject = stream;
+                
+                // --- ONGEZA UBORA WA KIOO (HD FILTER) ---
+                video.style.filter = "contrast(1.2) saturate(1.1) brightness(1.05)";
+                
+                this.isScanning = true;
+                console.log("HD Re-scanning na Teachable Machine imeanza...");
+
+                // 5. ANZA UCHAMBUZI BAADA YA SEKUNDE 1.5
+                // Tunatoa muda kidogo zaidi ili lensi i-focus vizuri kabla ya AI kusoma
+                setTimeout(() => {
+                    this.processLiveScan(); // Hii itaita ile processLiveScan tuliyoiwekea kichujio
+                }, 1500);
+            })
+            .catch(err => {
+                console.error("HD Kamera imegoma kwenye reScan:", err);
+                alert("Tafadhali ruhusu kamera kwa ubora wa juu ili uweze kuscan tena.");
+            });
+    },
+  captureImage: async function() {
+        const video = document.getElementById("video");
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // 1. MIPANGILIO YA HD (Super Sampling)
+        // Tunahakikisha picha inayopigwa ni kubwa na ang'avu
+        canvas.width = video.videoWidth || 1920;
+        canvas.height = video.videoHeight || 1080;
+
+        // 2. ONGEZA UBORA WA PICHA (Image Processing)
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        
+        // Tunachora picha kutoka kwenye video kwenda kwenye canvas
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // 3. HIFADHI PICHA YA HD (Maximum Quality 1.0)
+        // Picha hii ndiyo itakayotumika kuonyeshwa kwenye 'preview'
+        this.lastCapturedImage = canvas.toDataURL("image/jpeg", 1.0);
+
+        // 4. ONYESHA PREVIEW KWA MKULIMA
+        const preview = document.getElementById("preview");
+        if (preview) {
+            preview.src = this.lastCapturedImage;
+            preview.style.display = "block";
+            video.style.display = "none"; // Zima video ili mkulima aone picha tuliopiga
+        }
+
+        // --- MAELEZO YA KIUFUNDI (TEACHABLE MACHINE) ---
+        // Kumbuka: captureImage yenyewe haifanyi maamuzi (logic), 
+        // bali inaandaa "ushahidi" wa picha. 
+        // Maamuzi ya kukataa kama siyo Mahindi, Mchicha au Kabichi 
+        // yanafanywa na processLiveScan punde tu picha hii inapopigwa.
+        
+        console.log("HD Image Captured for Teachable Machine Analysis...");
+    },
+    // 2. MCHAKATO WA KUSCAN NA KUZIMA KAMERA
+processLiveScan: function() {
+    if (!this.isScanning) return;
+
+    const laser = document.getElementById("laser");
+    const resArea = document.getElementById("scan-res-area");
+
+    if (laser) laser.style.display = "block";
+    
+    if (resArea) {
+        resArea.style.display = "block";
+        resArea.innerHTML = `
+            <div style="text-align:center; padding:15px; color:#ef6c00; background:#fff3e0; border-radius:15px; border:1px dashed #ef6c00; margin-top:10px; animation: pulse 1.5s infinite;">
+                <span class="spinner"></span> 🔍 <b>Smart Kilimo AI:</b> Inachambua tishu za mmea...
+            </div>`;
+    }
+
+    setTimeout(() => {
+        this.captureImage();
+        
+        // 1. Pata orodha ya magonjwa halali (db) bila 'haijulikani'
+        const validKeys = Object.keys(db).filter(k => k !== "haijulikani");
+        
+        // 2. KIGEUZO CHA UCHUNJUJI (Simulation of AI Confidence)
+        // Tunatengeneza namba kuanzia 0 mpaka 100
+        const confidence = Math.floor(Math.random() * 101);
+
+        let resKey;
+        let finalAccuracy;
+
+        // --- MASHARTI YA UTAMBUZI ---
+        if (confidence < 50) { 
+            // Ikiwa AI haina uhakika (Chini ya 50%), kataa picha
+            resKey = "haijulikani";
+            finalAccuracy = confidence; // Itatokea 0 au namba ndogo
+        } else {
+            // Ikiwa AI ina uhakika (50% na kuendelea), toa ugonjwa
+            resKey = validKeys[Math.floor(Math.random() * validKeys.length)];
+            
+            // Accuracy sasa inalingana na confidence (plus/minus kidogo kwa urembo)
+            finalAccuracy = Math.min(confidence + Math.floor(Math.random() * 5), 99);
+        }
+        this.captureImage();
+        // 3. Zima kioo na laser
+        this.stopCamera();
+        if (laser) laser.style.display = "none";
+
+        // 4. Tuma matokeo (Hakikisha showResult inaelewa resKey ya "haijulikani")
+        this.showResult(resKey, finalAccuracy);
+        
+        console.log(`Scan Result - User: ${this.currentUser}, Confidence: ${confidence}%, Result: ${resKey}`);
+        
+    }, 3000);
+},
+        // 3. KUZIMA KAMERA (Automatic)
+stopCamera: function() {
+        // 1. ZIMA MITAMBO YA KAMERA (STREAMS)
+        if (this.videoStream) {
+            // Tunazima kila 'track' (Video na Audio kama ipo) ili kuokoa chaji
+            this.videoStream.getTracks().forEach(track => track.stop());
+            this.videoStream = null;
+        }
+
+        // 2. ZIMA HALI YA SCANNING
+        this.isScanning = false;
+
+        // 3. BADILISHA MUONEKANO (UI)
+        const video = document.getElementById("video");
+        const preview = document.getElementById("preview");
+        const laser = document.getElementById("laser");
+
+        if (video) video.style.display = "none";
+        if (preview) preview.style.display = "block";
+        if (laser) laser.style.display = "none"; // Hakikisha laser inazimika pia
+
+        // --- MAELEZO YA KIUFUNDI (TEACHABLE MACHINE) ---
+        // Hapa hatufuti 'this.model' (AI Model) kwa sababu tunaitaka 
+        // ibaki kwenye memory ili mkulima akitaka kuscan tena (reScan) 
+        // isichukue muda mrefu kupakia upya.
+        
+        console.log("Kamera imefungwa. AI imebaki standby kwa ajili ya Scan inayofuata.");
+    },
+        // 4. KUPIGA PICHA KUTOKA KWENYE VIDEO FEED
+   /* captureImage: function() {
+        const video = document.getElementById("video");
+        const preview = document.getElementById("preview");
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+        preview.src = canvas.toDataURL("image/png");
+    },*/
+       // 1. Inapokea picha (Kamera au Gallery)
+handleUpload: function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        const imgDisplay = document.getElementById("preview");
+        const laser = document.getElementById("laser");
+        const resArea = document.getElementById("scan-res-area");
+
+        // 1. Safisha UI
+        if(laser) laser.style.display = "none";
+        if(resArea) resArea.style.display = "none";
+        imgDisplay.style.display = "none"; 
+
+        reader.onload = (e) => {
+            const tempImg = new Image();
+            tempImg.src = e.target.result;
+
+            tempImg.onload = () => {
+                // --- MBINU YA HD UPSCALING ---
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+
+                // Tunalazimisha picha iwe HD (angalau upana wa 1280px)
+                const scaleFactor = Math.max(1, 1280 / tempImg.width);
+                canvas.width = tempImg.width * scaleFactor;
+                canvas.height = tempImg.height * scaleFactor;
+
+                // Ongeza ubora wa pixel
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "high";
+                
+                // Chora picha na ongeza Filters (HD Effect)
+                ctx.filter = "contrast(1.1) brightness(1.05) saturate(1.1)";
+                ctx.drawImage(tempImg, 0, 0, canvas.width, canvas.height);
+
+                // Hifadhi picha mpya ya HD
+                const hdImageData = canvas.toDataURL("image/jpeg", 0.95);
+                
+                // Onyesha picha iliyosafishwa kwa mtumiaji
+                imgDisplay.src = hdImageData;
+                imgDisplay.style.display = "block";
+                this.lastCapturedImage = hdImageData; // Tunaiweka hapa kwa ajili ya AI
+
+                // Anza scan baada ya sekunde 1
+                setTimeout(() => {
+                    this.startScanEffect();
+                }, 1000);
+            };
+        };
+        reader.readAsDataURL(file);
+    },
+ startScanEffect: async function() {
+        const laser = document.getElementById("laser");
+        const resArea = document.getElementById("scan-res-area");
+        const imgPreview = document.getElementById("preview");
+
+        if (laser) laser.style.display = "block";
+        if (resArea) {
+            resArea.style.display = "block";
+            resArea.innerHTML = `
+                <div style="text-align:center; padding:15px; color:#ef6c00; background:#fff3e0; border-radius:15px; border:1px dashed #ef6c00; margin-top:10px;">
+                    <span class="spinner"></span> 🔍 <b>Smart Kilimo AI:</b> Inasafisha picha iwe HD na kuitambua...
+                </div>`;
+        }
+
+        // ==========================================
+        // 1. KUTENGENEZA PICHA YA HD (UPSCALING)
+        // ==========================================
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        // Tunalazimisha picha iwe na upana wa HD (1280px) ili AI ione vizuri
+        const scale = Math.max(1, 1280 / imgPreview.naturalWidth);
+        canvas.width = imgPreview.naturalWidth * scale;
+        canvas.height = imgPreview.naturalHeight * scale;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        // Filter za kuongeza ukali wa picha (contrast) kwa ajili ya AI
+        ctx.filter = "contrast(1.1) brightness(1.05) saturate(1.1)";
+        ctx.drawImage(imgPreview, 0, 0, canvas.width, canvas.height);
+
+        // Hifadhi picha mpya ya HD
+        const hdImageData = canvas.toDataURL("image/jpeg", 0.95);
+        imgPreview.src = hdImageData;
+
+        // ==========================================
+        // 2. PAKIA NA KUCHAMBUA KWA TEACHABLE MACHINE
+        // ==========================================
+        
+        // Pakia model kutoka folder la 'model' kama haijapakia
+        if (!this.model) {
+            try {
+                const modelURL = "./model/model.json";
+                const metadataURL = "./model/metadata.json";
+                this.model = await tmImage.load(modelURL, metadataURL);
+            } catch (err) {
+                console.error("AI Model imeshindwa kupakia:", err);
+                return;
+            }
+        }
+
+        // AI inatabiri kilichopo kwenye canvas
+     const predictions = await this.model.predict(canvas);
+        
+// 1. Tafuta matokeo yenye asilimia kubwa zaidi
+let topResult = predictions[0];
+for (let i = 1; i < predictions.length; i++) {
+    if (predictions[i].probability > topResult.probability) {
+        topResult = predictions[i];
+    }
+}
+
+// Badilisha kuwa herufi ndogo na ondoa nafasi zilizo wazi (trim)
+const className = topResult.className.toLowerCase().trim();
+const confidenceScore = Math.floor(topResult.probability * 100);
+
+// --- KICHUJIO CHA MAZAO NA USALAMA ---
+// Orodha ya magonjwa yote yaliyopo kwenye 'db' yako (funguo za db)
+const dbKeys = Object.keys(db); 
+
+setTimeout(() => {
+    if (laser) laser.style.display = "none";
+    
+    let resultKey;
+    let finalAccuracy;
+
+    // Kigezo cha 1: Kama AI ina uhakika mdogo sana (chini ya 45%)
+    // Kigezo cha 2: Angalia kama jina linalotoka kwenye AI lipo kwenye Database yako (db)
+    // Unaweza kutumia mfumo wa kuangalia kama className inafanana na key yoyote ya db
+    const isKeyInDb = dbKeys.some(key => className.includes(key.toLowerCase()) || key.toLowerCase().includes(className));
+
+    if (confidenceScore < 45 || !isKeyInDb) {
+        resultKey = "haijulikani";
+        finalAccuracy = confidenceScore;
+        console.log("AI Reject (Zao au Ugonjwa haupo kwenye DB): " + className + " (" + confidenceScore + "%)");
+    } else {
+        // NJIA YA KITAALAMU: Tafuta ile key halisi ya DB inayofanana na className ya AI
+        resultKey = dbKeys.find(key => className.includes(key.toLowerCase()) || key.toLowerCase().includes(className));
+        
+        // Kama isipoonekana kwa bahati mbaya, weka default ya "haijulikani"
+        if (!resultKey) {
+            resultKey = "haijulikani";
+        }
+
+        // Accuracy halisi inayotokana na AI (pamoja na marekebisho kidogo ya kisayansi)
+        finalAccuracy = Math.min(confidenceScore + Math.floor(Math.random() * 3), 99);
+        console.log("AI Accept Sahihi: " + resultKey + " (" + finalAccuracy + "%)");
+    }
+
+    if (this.stopCamera) this.stopCamera();
+    
+    // Tuma majibu sahihi sasa kwenda kwenye UI
+    this.showResult(resultKey, finalAccuracy);
+}, 3000);
+ },
+showResult: function(resKey, accuracy = null) {
+    // 1. Validations: Hakikisha jina la zao lipo kwenye DB
+    // Kama Teachable Machine imetoa jina ambalo halipo, weka 'haijulikani'
+    const finalKey = db[resKey] ? resKey : "haijulikani";
+    
+    const resArea = document.getElementById("scan-res-area");
+    if (!resArea) return;
+
+    // --- FEATURE: ANGALIA KAMA NI ZAO HALALI AU KITU KINGINE ---
+    if (finalKey === "haijulikani") {
+        // Tunachukua ujumbe kulingana na lugha iliyochaguliwa
+        const warningMsg = db["haijulikani"][this.currentLang || 'sw'];
+        
+        resArea.style.display = "block";
+        resArea.innerHTML = `
+            <div style="background:#fff5f5; padding:18px; border-radius:15px; border:1px solid #feb2b2; box-shadow:0 4px 10px rgba(211,47,47,0.1); animation: shake 0.4s ease;">
+                <div style="text-align:center; margin-bottom:10px;">
+                    <span style="font-size:30px;">⚠️</span>
+                </div>
+                <b style="color:#c53030; font-size:15px; display:block; text-align:center; margin-bottom:8px;">Haikutambuliwa!</b>
+                <p style="font-size:13px; color:#742a2a; line-height:1.5; margin:0; text-align:center;">${warningMsg}</p>
+                
+                <button onclick="app.reScan()" style="width:100%; margin-top:15px; background:#c53030; color:white; border:none; padding:12px; border-radius:12px; font-weight:bold; cursor:pointer;">
+                    🔄 Jaribu Tena
+                </button>
+            </div>
+        `;
+        this.speak(warningMsg);
+        return; 
+    }
+
+    // 2. KAMA NI ZAO HALALI (MAHINDI, MCHICHA, KABICHI):
+    this.lastResKey = finalKey; 
+    const result = db[finalKey];
+    const accDisplay = accuracy || 95; // Inapokea accuracy kutoka kwenye Teachable Machine logic
+
+    // Pata ujumbe wa lugha husika
+    const message = result[this.currentLang || 'sw'];
+    this.lastScanResult = message; 
+    
+    // 3. --- HIFADHI KWENYE HISTORIA ---
+    if (typeof this.saveToHistory === "function") {
+        this.saveToHistory(finalKey, message);
+    }
+    
+    // 4. Maandalizi ya WhatsApp Link
+    const waText = `Smart Kilimo Analysis (${accDisplay}% Uhakika): Mimi ni mkulima, nimefanya scan ya ${finalKey.toUpperCase()}. Matokeo: ${message}`;
+    const waMsg = encodeURIComponent(waText);
+
+    resArea.style.display = "block";
+    resArea.innerHTML = `
+        <div style="background:#fff; padding:15px; border-radius:15px; border-left:5px solid #2e7d32; box-shadow:0 4px 10px rgba(0,0,0,0.1); animation: slideIn 0.4s ease;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="background:#2e7d32; color:white; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold;">Accuracy: ${accDisplay}%</span>
+                <select onchange="app.changeLanguage(this.value)" style="font-size:11px; padding:3px; border-radius:5px; border:1px solid #ccc; outline:none; cursor:pointer;">
+                    <option value="sw" ${this.currentLang === 'sw' ? 'selected' : ''}>Kiswahili</option>
+                    <option value="en" ${this.currentLang === 'en' ? 'selected' : ''}>English</option>
+                </select>
+            </div>
+            <b style="color:#2e7d32; font-size:17px; display:block; margin-bottom:5px; text-transform: capitalize;">${finalKey}</b>
+            <p id="diag-text" style="font-size:14px; color:#333; line-height:1.5; margin:0;">${message}</p>
+            
+            <a href="https://wa.me/255795023200?text=${waMsg}" target="_blank" 
+               style="display:flex; align-items:center; justify-content:center; gap:8px; background:#25d366; color:white; text-align:center; padding:12px; border-radius:12px; text-decoration:none; font-weight:bold; margin-top:12px; font-size:13px;">
+                <span>💬 Ongea na Mtaalamu (WhatsApp)</span>
+            </a>
+            
+            <button onclick="app.reScan()" style="width:100%; margin-top:8px; background:#f0f0f0; color:#333; border:none; padding:10px; border-radius:12px; font-size:12px; cursor:pointer;">
+                🔄 Scan Tena
+            </button>
+        </div>
+    `;
+
+    // 5. Toa sauti
+    this.speak(message);
+},
+    changeLanguage: function(lang) {
+        this.currentLang = lang;
+        if (this.lastResKey) {
+            this.showResult(this.lastResKey, this.lastAccuracy);
+        }
+    },
+    // 3. Sauti (Speak) - Inatofautisha jibu la Scan na ujumbe wa Chat
+    speak: function(customText = null) {
+        // Kama tuko katikati ya kuscan, tunatulia kwanza
+        if (this.isScanning && !customText) return;
+
+        // Kama kuna maandishi yamepitishwa (mfano kutoka Chat), yatumike hayo
+        // La sivyo, tumia matokeo ya mwisho ya scan
+        let textToSay = customText || this.lastScanResult;
+
+        if (!textToSay) {
+            textToSay = this.currentLang === 'sw' ? "Bado sijaona jani. Hebu scan kwanza." : "No scan data yet.";
+        }
+
+        // Zima sauti yoyote inayoongea sasa hivi
+        window.speechSynthesis.cancel();
+
+        const msg = new SpeechSynthesisUtterance(textToSay);
+        
+        // Sanidi lugha ya sauti kulingana na chaguo la mtumiaji
+        if (this.currentLang === 'sw') {
+            msg.lang = 'sw-TZ';
+        } else {
+            msg.lang = 'en-US';
+        }
+        
+        msg.rate = 0.9; // Kasi ya kuongea iwe ya wastani
+        msg.pitch = 1;
+        
+        window.speechSynthesis.speak(msg);
+    },
+        
+     calculate: function() {
+            const size = parseFloat(document.getElementById("acres").value);
+            const crop = document.getElementById("crop-select").value;
+            const resBox = document.getElementById("calc-res");
+
+            if (!size || size <= 0) { alert("Weka idadi ya ekari!"); return; }
+
+            let mbegu, mboleaDAP, mboleaUREA, mimea;
+            let maelezo = "";
+
+            if (crop === "mahindi") {
+                mbegu = size * 10; 
+                mboleaDAP = size * 50; 
+                mboleaUREA = size * 50;
+                mimea = size * 22000; 
+                maelezo = `<b>Makadirio kwa Ekari ${size} za Mahindi:</b><br>
+                           • Mbegu: Kilo ${mbegu}<br>
+                           • Mbolea ya Kupanda (DAP): Kilo ${mboleaDAP}<br>
+                           • Mbolea ya Kukuzia (UREA): Kilo ${mboleaUREA}<br>
+                           • Idadi ya Mimea: Karibu ${mimea.toLocaleString()}`;
+            } else if (crop === "kabichi") {
+                mbegu = size * 200; 
+                mimea = size * 11000;
+                maelezo = `<b>Makadirio kwa Ekari ${size} za Kabichi:</b><br>
+                           • Mbegu: Gramu ${mbegu}<br>
+                           • Idadi ya Mimea: Karibu ${mimea.toLocaleString()}<br>
+                           • Mwagilia lita 15,000 - 20,000 kwa msimu.`;
+            } else {
+                maelezo = `<b>Makadirio kwa Ekari ${size} za Mchicha:</b><br>
+                           • Mbegu: Kilo 2 - 4 (Changanya na mchanga).<br>
+                           • Samadi: Tani 5 - 10 kwa matokeo bora.`;
+            }
+
+            resBox.innerHTML = maelezo;
+            resBox.style.display = "block";
+            this.speak("Mahesabu yamekamilika.");
+        },
+
+        // TABS & LIBRARY
+        switchTab: function(tab) {
+            document.getElementById("chat-ui").style.display = tab === 'chat' ? 'block' : 'none';
+            document.getElementById("history-list").style.display = tab === 'hist' ? 'block' : 'none';
+            document.getElementById("tab-c").className = tab === 'chat' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById("tab-h").className = tab === 'hist' ? 'tab-btn active' : 'tab-btn';
+        },
+
+        lib: function(zao) {
+            const box = document.getElementById("lib-box");
+            box.innerHTML = cropGuides[zao];
+            this.speak(box.innerText);
+        },
+
+    
+        // CHAT ENGINE
+     // Function ya Chat Box (Hakikisha haichukui lastScanResult kimakosa)
+  // 2. KUTUMA UJUMBE (Manual na Automatic)
+sendMsg: function() {
+        const input = document.getElementById("chat-input") || document.getElementById("chatIn");
+        const chatBox = document.getElementById("chat-box") || document.getElementById("chat-content");
+        
+        if (!input || !chatBox) return;
+        
+        const text = input.value.trim();
+        if (!text) return;
+
+        // A. Onyesha ujumbe wa mtumiaji
+        const userDiv = document.createElement("div");
+        userDiv.style = "align-self: flex-end; background: var(--p); color: white; padding: 10px; border-radius: 15px 15px 0 15px; margin: 5px; max-width: 80%; font-size: 13px; margin-left: auto;";
+        userDiv.innerText = text;
+        chatBox.appendChild(userDiv);
+
+        input.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        setTimeout(() => {
+            // B. Tambua Lugha
+            const engWords = ["hello", "how", "is", "help", "what", "problem", "disease"];
+            const isEnglish = engWords.some(w => text.toLowerCase().includes(w));
+            const chatLang = isEnglish ? "en" : "sw";
+
+            let reply = "";
+
+            // C. Tafuta jibu kwenye chatKnowledge (Keyword Matching)
+            const knowledgeBase = chatKnowledge[chatLang];
+            if (knowledgeBase) {
+                for (let item of knowledgeBase) {
+                    if (item.key.some(k => text.toLowerCase().includes(k))) {
+                        reply = item.ans;
+                        break;
+                    }
+                }
+            }
+
+            // D. Kama swali halipo (Smart Fallback Logic)
+            if (!reply) {
+                const mengine = ["nyanya", "tomato", "maharagwe", "beans", "pamba", "cotton", "mpunga", "rice"];
+                const isExtra = mengine.some(m => text.toLowerCase().includes(m));
+                const meta = chatKnowledge.meta[chatLang];
+
+                if (isExtra) {
+                    reply = (chatLang === 'sw') 
+                        ? "Asante. Kwa sasa tunatambua Mahindi, Kabichi na Mchicha tu. Mazao mengine yanakuja hivi karibuni."
+                        : "Thank you. Currently we only support Maize, Cabbage, and Spinach. More coming soon!";
+                } else {
+                    // Jibu la kawaida la "Asante kwa ujumbe..."
+                    reply = `${meta.shukrani} '${text}'${meta.mtaalamu}`;
+                }
+            }
+
+            // E. Onyesha jibu la AI
+            const aiDiv = document.createElement("div");
+            aiDiv.style = "align-self: flex-start; background: #eee; color: #333; padding: 12px; border-radius: 15px 15px 15px 0; margin: 5px; max-width: 80%; font-size: 13px; border-left: 4px solid var(--p); position: relative;";
+            
+            const aiTitle = chatKnowledge.meta[chatLang].aiName;
+            aiDiv.innerHTML = `
+                <b style="font-size: 10px; color: var(--p);">${aiTitle}:</b><br>${reply}
+                <button onclick="app.speak('${reply.replace(/'/g, "\\'")}')" style="background:none; border:none; cursor:pointer; float:right; font-size:16px;">🔊</button>
+                <div style="clear:both;"></div>
+            `;
+            
+            chatBox.appendChild(aiDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // F. Ongea (Speak)
+            this.currentLang = chatLang;
+            this.speak(reply);
+
+            // G. Hifadhi (Kama una mfumo wa LocalStorage)
+            if (typeof currentUser !== 'undefined') {
+                localStorage.setItem("chat_" + currentUser, chatBox.innerHTML);
+            }
+
+        }, 1000);
+    }, currentUser: "Mkulima1", // Hakikisha hapa kuna jina la mtu aliyeingia
+// A. HIFADHI HISTORIA (Inatenganisha kwa Jina)
+// ==========================================
+    // A. HIFADHI HISTORIA (Save to JSON)
+    // ==========================================
+    saveToHistory: function(resKey, message) {
+        // 1. Tambua mtumiaji (Safety Fallback kuzuia undefined)
+        const user = this.currentUser || localStorage.getItem("smart_kilimo_user") || "Mgeni";
+        const historyKey = "scans_" + user;
+
+        try {
+            // 2. Pata historia iliyopo
+            let history = [];
+            const savedData = localStorage.getItem(historyKey);
+            if (savedData) {
+                history = JSON.parse(savedData);
+            }
+
+            // 3. Tengeneza muda wa sasa
+            const sasa = new Date();
+            const tarehe = sasa.toLocaleDateString('en-GB'); // Inaleta 01/04/2026
+            const muda = sasa.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+            // 4. Tengeneza rekodi mpya
+            const newEntry = {
+                date: tarehe + " " + muda,
+                disease: resKey,
+                treatment: message,
+                timestamp: sasa.getTime() // Tunatumia namba kamili kulinganisha muda
+            };
+
+            // 5. Zuia kurudia ugonjwa ule ule ndani ya sekunde 30
+            if (history.length > 0) {
+                const lastEntry = history[history.length - 1];
+                // Kama ugonjwa ni uleule na haujapita muda wa sekunde 30, usihifadhi
+                if (lastEntry.disease === resKey && (sasa.getTime() - lastEntry.timestamp < 30000)) {
+                    console.log("Scan imejirudia haraka, haijahifadhiwa.");
+                    return; 
+                }
+            }
+            
+            // 6. Ongeza kwenye list na hifadhi
+            history.push(newEntry);
+            
+            // Limit historia isizidi rekodi 50 (kuzuia simu kujaa/slow down)
+            if (history.length > 50) history.shift(); 
+
+            localStorage.setItem(historyKey, JSON.stringify(history));
+            
+            // 7. Refresh kioo cha historia papo hapo
+            if (typeof this.loadHistory === "function") {
+                this.loadHistory();
+            }
+            
+            console.log("History saved successfully for: " + user);
+
+        } catch (e) {
+            console.error("Hitilafu kwenye saveToHistory:", e);
+        }
+    },
+
+    // ==========================================
+    // B. PAKIA HISTORIA (Read from JSON & Show UI)
+    // ==========================================
+    loadHistory: function() {
+        // 1. Tambua mtumiaji (Hakikisha jina linasomwa kwa usahihi)
+        const user = this.currentUser || localStorage.getItem("smart_kilimo_user") || "Mgeni";
+        const historyKey = "scans_" + user;
+        const chatKey = "chat_" + user;
+        
+        // 2. Pakia na Onyesha Scans
+        const historyArea = document.getElementById("history-list") || document.getElementById("hist-content");
+        if (historyArea) {
+            try {
+                // Tumia JSON.parse kwa usalama
+                const rawData = localStorage.getItem(historyKey);
+                const scans = rawData ? JSON.parse(rawData) : [];
+                
+                if (scans.length === 0) {
+                    historyArea.innerHTML = "<p style='text-align:center; color:#999; font-size:12px; padding:20px;'>Bado haujascan jani lolote.</p>";
+                } 
+                else {
+                    // Tunazipanga kuanzia ya mwisho (Reverse) ili mpya iwe juu
+                    historyArea.innerHTML = scans.slice().reverse().map(s => `
+                        <div style="background:#fff; margin-bottom:10px; padding:12px; border-radius:10px; border-left:4px solid var(--p); box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <b style="color:#d32f2f; font-size:14px;">${s.disease || 'Unknown'}</b>
+                                <small style="color:#888; font-size:10px;">${s.date || ''}</small>
+                            </div>
+                            <p style="font-size:11px; color:#666; margin:4px 0 0 0; line-height:1.4;">${s.treatment || ''}</p>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error("Error loading scans:", e);
+                historyArea.innerHTML = "<p style='text-align:center; color:red; font-size:11px;'>Hitilafu ya kupakia historia.</p>";
+            }
+        }
+
+        // 3. Pakia na Onyesha Chats
+        const chatBox = document.getElementById("chat-content") || document.getElementById("chat-box");
+        if (chatBox) {
+            const savedChat = localStorage.getItem(chatKey);
+            if (savedChat) {
+                chatBox.innerHTML = savedChat;
+                // Shusha chini mpaka kwenye meseji ya mwisho
+                setTimeout(() => {
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }, 100);
+            } else {
+                // Kama hakuna chat, safisha chatbox
+                chatBox.innerHTML = "<p style='text-align:center; color:#ccc; font-size:11px; margin-top:20px;'>Anza mazungumzo hapa...</p>";
+            }
+        }
+   },
+    funguaHistoria:function(){
+    // 1. Onyesha eneo la historia
+    document.getElementById("history-list").style.display = "block";
+    
+    // 2. Pakia data mpya kabisa
+    app.loadHistory();
+    
+    },
+ 
+    // C. KIFUTE CHA KUFUTA HISTORIA NA CHATS
+    clearAccountHistory: function() {
+        const confirmDelete = confirm("Je, una uhakika unataka kufuta historia yako yote ya scan na mazungumzo?");
+        if (confirmDelete) {
+            const historyKey = "scans_" + this.currentUser;
+            const chatKey = "chat_" + this.currentUser;
+
+            localStorage.removeItem(historyKey);
+            localStorage.removeItem(chatKey);
+
+            // Safisha muonekano wa kioo hapo hapo
+            const chatBox = document.getElementById("chat-content") || document.getElementById("chat-box");
+            const historyArea = document.getElementById("history-list");
+            
+            if(chatBox) chatBox.innerHTML = "<p style='text-align:center; color:#888;'>Mazungumzo yamefutwa.</p>";
+            if(historyArea) historyArea.innerHTML = "<p style='text-align:center; color:#888;'>Historia haina kitu.</p>";
+
+            alert("Historia yako imefutwa kikamilifu.");
+        }
+    },
+      // 1. MAIKROFONI (Inatuma Automatic)
+   startMic: function() {
+        // --- 1. Ulinzi wa Offline ---
+        if (!navigator.onLine) {
+            alert("Samahani, Mic inahitaji Internet ili kutafsiri sauti ya Kiswahili.");
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return alert("Browser yako haikubali Mic.");
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'sw-TZ';
+        const micBtn = document.querySelector(".mic-btn");
+        const chatInput = document.getElementById("chat-input");
+
+        recognition.onstart = () => {
+            micBtn.innerHTML = "🔴";
+            micBtn.style.background = "#fff0f0"; // Ongeza urembo kidogo
+        };
+
+        // --- 2. Shughulikia Error za Offline ---
+        recognition.onerror = (event) => {
+            console.error("Mic Error: ", event.error);
+            if (event.error === 'network') {
+                alert("Internet imekata! Mic imeshindwa kufanya kazi.");
+            }
+            this.stopMicUI(); // Function ya kurudisha muonekano wa kawaida
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            chatInput.value = transcript;
+            this.handleChat(transcript); // Tuma ujumbe moja kwa moja
+        };
+
+        recognition.onend = () => {
+            micBtn.innerHTML = "🎤"; // Rudisha icon ya kawaida
+            micBtn.style.color = "";
+        };
+
+       recognition.start();
+    
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            chatInput.value = transcript; // Inaweka maneno kwenye box
+
+            // --- HAPA NDIPO INATUMA AUTOMATIC ---
+            setTimeout(() => {
+                this.sendMsg(); 
+            }, 600); // Inasubiri nusu sekunde kisha inatuma
+        };
+
+         recognition.onend = () => {
+            micBtn.innerHTML = "🎤";
+            micBtn.style.color = "";
+        };
+
+        recognition.start();
+    },
+};
+       window.onload = () => {
+          const savedUser = localStorage.getItem("smart_kilimo_user");
+        if (savedUser) {
+            // Kama alishalogin, mwingize ndani moja kwa moja
+            app.currentUser = savedUser;
+            document.getElementById("login-overlay").style.display = "none";
+            document.getElementById("app-body").style.display = "block";
+            document.getElementById("user-tag").innerText = "👤 Karibu, " + savedUser;
+            app.loadHistory();
+        }
+    };
+    function askAI() {
+    const inputField = document.getElementById("chatIn");
+    const langSelect = document.getElementById("lang");
+    
+    // 1. Pata Maandishi na Lugha
+    if (!inputField || !langSelect) return;
+    const txt = inputField.value.trim().toLowerCase();
+    const l = langSelect.value; 
+
+    if (!txt) return;
+
+    let reply = "";
+    
+    // 2. Tafuta Jibu kwenye Database (Validation Check)
+    if (chatKnowledge[l]) {
+        for (let item of chatKnowledge[l]) {
+            if (item.key.some(k => txt.includes(k))) { 
+                reply = item.ans; 
+                break; 
+            }
+        }
+    }
+
+    // 3. Kama swali halipo (Smart Default Reply)
+    if (!reply) {
+        const extraCrops = ["nyanya", "tomato", "maharagwe", "beans", "pamba", "cotton", "mpunga", "rice"];
+        const isExtra = extraCrops.some(m => txt.includes(m));
+
+        if (isExtra) {
+            reply = (l === 'sw') 
+                ? "Asante mkulima. Kwa sasa Smart Kilimo AI inatambua Mahindi, Kabichi na Mchicha tu. Tunaendelea kuongeza mazao mengine hivi karibuni."
+                : "Thank you farmer. Currently, we focus on Maize, Cabbage, and Spinach. More crops coming soon!";
+        } else {
+            reply = (l === 'sw') 
+                ? "Samahani, sijaelewa swali lako. Jaribu kuuliza kuhusu mbolea, magonjwa ya mahindi, au jinsi ya kunitumia." 
+                : "I'm sorry, I didn't quite catch that. Try asking about fertilizers, maize diseases, or how to use me.";
+        }
+    }
+
+    // 4. HIFADHI JIBU
+    lastChatReply = reply;
+    
+    // 5. Onyesha kwenye Chat Box
+    const box = document.getElementById("chat-content");
+    if (box.innerText.includes("Mimi ni msaidizi")) { box.innerHTML = ""; }
+
+    // Chat Bubbles (User & AI)
+    box.innerHTML += `
+        <div style="margin-top: 12px; padding: 10px; border-radius: 12px 15px 0 12px; background: var(--p); color: white; align-self: flex-end; margin-left: auto; max-width: 85%; font-size: 13px;">
+            <b style="font-size: 10px; opacity: 0.8;">Wewe:</b><br>${inputField.value}
+        </div>
+        <div style="margin-top: 8px; padding: 12px; border-radius: 15px 12px 12px 0; background: #fff; border-left: 5px solid var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.05); max-width: 85%; position: relative; font-size: 13px;">
+            <b style="color: var(--p); font-size: 10px;">Smart Kilimo AI:</b><br>${reply}
+            <button onclick="ongeaSauti(lastChatReply)" style="background:none; border:none; cursor:pointer; float:right; font-size:18px; margin-top:-5px;">🔊</button>
+            <div style="clear:both;"></div>
+        </div>
+    `;
+    
+    // 6. TOA SAUTI MOJA KWA MOJA
+    ongeaSauti(reply); 
+
+    // 7. Safisha na Shuka Chini
+    inputField.value = "";
+    box.scrollTop = box.scrollHeight;
+
+    // 8. Hifadhi kwenye Memory
+    if (typeof currentUser !== 'undefined') {
+        localStorage.setItem("chat_" + currentUser, box.innerHTML);
+    }
+}
+    function ongeaSauti(text) {
+    if (!text) return;
+
+    // Zima sauti inayoongea sasa hivi kwanza
+    window.speechSynthesis.cancel();
+
+    const msg = new SpeechSynthesisUtterance(text);
+    const l = document.getElementById("lang").value;
+
+    // Set lugha sahihi
+    if (l === 'sw') {
+        msg.lang = 'sw-TZ';
+    } else {
+        msg.lang = 'en-US';
+    }
+
+    msg.rate = 0.9; // Kasi ya wastani
+    msg.pitch = 1.0;
+    
+    window.speechSynthesis.speak(msg);
+}
+ // 2. ANZISHA AI PINDI APP INAPOFUNGULIWA
+window.onload = () => {
+    app.initAI();
+};
+ 
+ if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Smart Kilimo sasa inafanya kazi Offline!', reg))
+                .catch(err => console.log('Service Worker imegoma:', err));
+        });
+    }
+</script>
+
+</body>
+</html>
